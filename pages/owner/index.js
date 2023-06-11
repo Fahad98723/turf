@@ -521,7 +521,10 @@ const Owner = () => {
 
                   <tbody className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
                     {bookings.map((b) => (
-                      <tr className="bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-400">
+                      <tr
+                        key={b.name}
+                        className="bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-400"
+                      >
                         <td className="px-6 py-4 font-medium ">
                           <div className="flex items-center">{b.name}</div>
                         </td>
