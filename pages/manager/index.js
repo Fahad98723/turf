@@ -1,19 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "../../components/Sharerd/Navbar/Navbar";
 import dynamic from "next/dynamic";
 import "react-calendar/dist/Calendar.css";
 import { MdOutlineKeyboardArrowLeft } from "react-icons/md";
 import { useRouter } from "next/router";
-const Calendar = dynamic(
-  () => {
-    return import("react-calendar");
-  },
-  { ssr: false }
-);
+import axios from "axios";
+import Calendar from "../../components/Calendar/Calendar";
 
 const Manager = () => {
   const [date, setDate] = useState(new Date());
   const [select, setSelect] = useState([]);
+  const [selectTime, setSelectTime] = useState([]);
 
   const time = [
     "1.00 PM - 2.00 PM",
@@ -23,6 +20,110 @@ const Manager = () => {
     "11.00 PM - 12.00 AM",
     "12.00 AM - 1.00 AM",
   ];
+
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const res = await axios.get(
+          `http://localhost:5000/booking/turf@gmail.com`
+        );
+        setData(res.data.message);
+        console.log(res.data);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    run();
+  }, []);
+  console.log(data, "data");
+
+  const [timeSlots, setTimeSlots] = useState([
+    { time: "1.00 PM - 2.00 PM", status: null },
+    { time: "2.00 PM - 3.00 PM", status: null },
+    { time: "3.00 PM - 4.00 PM", status: null },
+    { time: "4.00 PM - 5.00 PM", status: null },
+    { time: "5.00 PM - 6.00 PM", status: null },
+    { time: "11.00 PM - 12.00 AM", status: null },
+    { time: "12.00 AM - 1.00 AM", status: null },
+  ]);
+
+  const [timeSlot, setTimeSlot] = useState([
+    { time: "1.00 PM - 2.00 PM", status: null },
+    { time: "2.00 PM - 3.00 PM", status: null },
+    { time: "3.00 PM - 4.00 PM", status: null },
+    { time: "4.00 PM - 5.00 PM", status: null },
+    { time: "5.00 PM - 6.00 PM", status: null },
+    { time: "11.00 PM - 12.00 AM", status: null },
+    { time: "12.00 AM - 1.00 AM", status: null },
+  ]);
+
+  useEffect(() => {
+    const run = async () => {
+      const currentDate = new Date().toISOString();
+      console.log(currentDate);
+      try {
+        const res = await axios.get(`http://localhost:5000/slot`);
+        setTimeSlots(
+          res?.data?.find(
+            (a) => a.date.slice(0, 10) == currentDate.slice(0, 10)
+          ).timeSlots
+        );
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    run();
+  }, []);
+
+  const handleTimeClick = (index) => {
+    const updatedTimeSlots = [...timeSlots];
+    updatedTimeSlots[index].status =
+      updatedTimeSlots[index].status === "booked" ? null : "booked";
+    setSelect(updatedTimeSlots);
+    if (selectTime.includes(updatedTimeSlots[index])) {
+      setSelectTime(
+        selectTime.filter((selected) => selected !== updatedTimeSlots[index])
+      );
+    } else {
+      setSelectTime([...selectTime, updatedTimeSlots[index]]);
+    }
+  };
+
+  const handleExtendTime = (index) => {
+    const updatedTimeSlots = [...timeSlots];
+    const selectedTimeSlot = updatedTimeSlots[index];
+
+    if (selectedTimeSlot.status === "booked") {
+      const [startTime, endTime] = selectedTimeSlot.time.split(" - ");
+
+      // Add 30 minutes to the time interval
+      const extendedEndTime = add30Minutes(endTime);
+      const extendedTimeSlot = `${startTime} - ${extendedEndTime}`;
+      updatedTimeSlots.splice(index, 1, {
+        time: extendedTimeSlot,
+        status: "booked",
+      });
+    }
+
+    setTimeSlot(updatedTimeSlots);
+  };
+
+  console.log(timeSlots);
+
+  const bookingHandle = () => {
+    axios
+      .patch(`http://localhost:5000/slot`, {
+        turfId: "item?.id",
+        date: new Date().toISOString().slice(0, 10),
+        timeSlots: timeSlot,
+      })
+      .then((res) => {
+        console.log(res.data);
+        alert("Booked");
+      });
+  };
 
   return (
     <div className="">
@@ -419,28 +520,32 @@ const Manager = () => {
 
           <div className="flex px-5 my-5">
             <Calendar
-              onChange={setDate}
-              value={date}
-              className="manager react-calendar"
+              className={`text-black w-full bg-white`}
+              setDate={setDate}
             />
             <div className=" ml-5">
               <p className="text-[16px] text-white">Available Slot</p>
               <div>
-                {time.map((a) => (
-                  <div
-                    key={a.id}
-                    onClick={() => {
-                      if (select.includes(a)) {
-                        setSelect(select.filter((ab) => ab !== a));
-                      } else {
-                        setSelect([...select, a]);
-                      }
-                    }}
-                    className={` w-full block cursor-pointer py-2 border bg-green-500  rounded-md my-2 ${
-                      select.includes(a) ? "bg-red-500 " : ""
-                    }`}
-                  >
-                    <p className="text-center text-[16px] ">{a}</p>
+                {timeSlots.map((timeSlot, index) => (
+                  <div className="flex" key={index}>
+                    <div
+                      onClick={() => handleTimeClick(index)}
+                      className={`w-full block cursor-pointer py-2 border rounded-md my-2 ${
+                        timeSlot.status === "booked"
+                          ? "bg-red-500"
+                          : "bg-green-500"
+                      }`}
+                    >
+                      <p className="text-center text-[16px]">{timeSlot.time}</p>
+                    </div>
+                    {/* {timeSlot.status === "booked" && (
+                        <div
+                          onClick={() => handleExtendTime(index)}
+                          className="w-[50px] block cursor-pointer py-2 border rounded-md my-2 ml-1"
+                        >
+                          <p className="text-center text-[16px]">-30</p>
+                        </div>
+                      )} */}
                   </div>
                 ))}
               </div>
@@ -476,6 +581,9 @@ const Manager = () => {
                       <th scope="col" className=" text-[#ABABAB] px-6 py-4 ">
                         Payment
                       </th>
+                      <th scope="col" className=" text-[#ABABAB] px-6 py-4 ">
+                        Status
+                      </th>
                       <th
                         scope="col"
                         className=" text-[#ABABAB] px-6 py-4 "
@@ -483,56 +591,66 @@ const Manager = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-                    <tr className="bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-400">
-                      <td className="px-6 py-4 font-medium ">
-                        <div className="flex items-center">Fahad</div>
-                      </td>
-                      <td className=" font-medium px-6 py-4 whitespace-nowrap">
-                        <a className="text-balck" href="tel:+880-1865233836">
-                          01865233836
-                        </a>{" "}
-                      </td>
-                      <td className=" font-medium px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <div>{new Date().toLocaleDateString()}</div>
+                    {data?.map((item) => (
+                      <tr className="bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-400">
+                        <td className="px-6 py-4 font-medium ">
+                          <div className="flex items-center">{item.name}</div>
+                        </td>
+                        <td className=" font-medium px-6 py-4 whitespace-nowrap">
+                          <a
+                            className="text-balck"
+                            href={`tel:+88${item.phonenumber}`}
+                          >
+                            {item.phonenumber}
+                          </a>{" "}
+                        </td>
+                        <td className=" font-medium px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <div>{new Date().toLocaleDateString()}</div>
 
-                          <div className="text-[#9FA2B4] text-sm">
-                            {new Date().toLocaleTimeString()}
+                            <div className="text-[#9FA2B4] text-sm">
+                              {new Date().toLocaleTimeString()}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className=" font-medium px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <div>{new Date().toLocaleDateString()}</div>
+                        </td>
+                        <td className=" font-medium px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <div>{new Date().toLocaleDateString()}</div>
 
-                          <div className="text-[#9FA2B4] text-sm">
-                            {new Date().toLocaleTimeString()} -{" "}
-                            {new Date().toLocaleTimeString()}
+                            <div className="text-[#9FA2B4] text-sm">
+                              {new Date().toLocaleTimeString()} -{" "}
+                              {new Date().toLocaleTimeString()}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className=" font-medium px-6 py-4">
-                        <div className="flex flex-col ">৳ 2000</div>
-                      </td>
-                      <td className=" font-medium px-6 py-4 flex items-center">
-                        <div
-                          onClick={(e) => setConfirmPage(true)}
-                          className="w-[100px] mr-2 cursor-pointer"
-                        >
-                          <p className=" px-5 py-2 bg-blue-500 text-center rounded-md mb-3 text-white active:opacity-80 text-[18px] ">
-                            Edit
-                          </p>
-                        </div>
-                        <div
-                          onClick={(e) => setConfirmPage(true)}
-                          className="w-[100px] cursor-pointer"
-                        >
-                          <p className=" px-5 py-2 bg-red-500 text-center rounded-md mb-3 text-white active:opacity-80 text-[18px] ">
-                            Cancel
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className=" font-medium px-6 py-4">
+                          <div className="flex flex-col ">৳ {item.price}</div>
+                        </td>
+                        <td className=" font-medium px-6 py-4">
+                          <div className="flex flex-col ">
+                            ৳ {item.priceStatus}
+                          </div>
+                        </td>
+                        <td className=" font-medium px-6 py-4 flex items-center">
+                          <div
+                            onClick={(e) => setConfirmPage(true)}
+                            className="w-[100px] mr-2 cursor-pointer"
+                          >
+                            <p className=" px-5 py-2 bg-blue-500 text-center rounded-md mb-3 text-white active:opacity-80 text-[18px] ">
+                              Edit
+                            </p>
+                          </div>
+                          <div
+                            onClick={(e) => setConfirmPage(true)}
+                            className="w-[100px] cursor-pointer"
+                          >
+                            <p className=" px-5 py-2 bg-red-500 text-center rounded-md mb-3 text-white active:opacity-80 text-[18px] ">
+                              Cancel
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
